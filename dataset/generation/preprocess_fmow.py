@@ -3,6 +3,7 @@ from utils import *
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from shapely.geometry import Polygon
 from shapely import wkt
+from tqdm import tqdm
 import pandas as pd
 import math
 import json
@@ -26,7 +27,7 @@ class PreProcessFMoW:
     
     def preprocess_list_of_images(self, image_paths):
         for img_path in image_paths:
-            image_data = get_metadata(img_path)
+            image_data = get_image_data(img_path)
             self.preprocess_image(image_data)
          
     def preprocess_image(self, image_data):
@@ -54,15 +55,9 @@ class PreProcessFMoW:
                 tile_metadata_path = tile_image_path.replace(".jpg", ".json")
                 tile_osm_path = tile_image_path.replace(".jpg", ".csv")
 
-                cv2.imwrite(tile_image_path, img_tile)
-
                 # Update JSON
                 tile_metadata = self.update_metadata_for_tile(metadata, tile_box)
                 tile_metadata["original_image_path"] = full_image_path 
-
-                # Save updated JSON for the tile
-                with open(tile_metadata_path, 'w') as f_out:
-                    json.dump(tile_metadata, f_out, indent=4)
 
                 # Update OSM Data
                 image_polygon = wkt.loads(tile_metadata["raw_location"])
@@ -70,8 +65,15 @@ class PreProcessFMoW:
                 tile_osm = tile_osm[tile_osm['geometry'].apply(lambda geom: geom.intersects(image_polygon))]
                 tile_osm['geometry'] = tile_osm['geometry'].apply(lambda geom: geom.intersection(image_polygon))
 
-                # Save Updates OSM Data
-                tile_osm.to_csv(tile_osm_path, sep=";", index=False)
+                if len(tile_osm):
+                    # Save Updates OSM Data
+                    tile_osm.to_csv(tile_osm_path, sep=";", index=False)
+                    # Save Tile Image
+                    cv2.imwrite(tile_image_path, img_tile)
+
+                    # Save updated JSON for the tile
+                    with open(tile_metadata_path, 'w') as f_out:
+                        json.dump(tile_metadata, f_out, indent=4)
             return
 
         with ThreadPoolExecutor() as thread_executor:

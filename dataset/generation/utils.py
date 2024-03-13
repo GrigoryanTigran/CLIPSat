@@ -20,9 +20,9 @@ def get_polygon_from_image_path(image_path):
 
     return wkt.loads(metadata["raw_location"])
 
-def get_metadata(image_path):
+def get_image_data(image_path):
     """Read metadata from the JSON file."""
-    basedir, class_name, instance_id, image_name = image_path.rsplit("/")
+    basedir, class_name, instance_id, image_name = image_path.rsplit("/", 3)
 
     image = cv2.imread(image_path)
     json_path = image_path[:-3] + "json"
@@ -65,7 +65,7 @@ def get_image_paths(fmow_datapath):
             if not os.path.isdir(instance_path):
                 continue
 
-            images = [os.path.join(instance_path, f) for f in os.listdir(instance_path) if f.endswith('_rgb.jpg')]
+            images = [os.path.join(instance_path, f) for f in os.listdir(instance_path) if f.endswith(('.jpg', ".png"))]
             image_paths.extend(images)
 
     return image_paths

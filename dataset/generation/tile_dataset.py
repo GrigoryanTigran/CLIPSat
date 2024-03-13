@@ -4,6 +4,11 @@ from preprocess_fmow import PreProcessFMoW
 
 import argparse
 
+def main(args):
+    preprocesser = PreProcessFMoW(args.fmow_e_dataset, args.output_dir, args.tile_size, args.overlap, args.workers)
+    preprocesser()
+
+
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description="Process FMoW dataset.")
     parser.add_argument('-d', "--fmow-e-dataset", type=str, help="FMoW dataset *Enriched with OSM* Directory")
@@ -13,5 +18,4 @@ if __name__=='__main__':
     parser.add_argument('-w', '--workers', type=int, default=4, help="Number of parallel threads")
 
     args = parser.parse_args()
-    preprocesser = PreProcessFMoW(args.fmow_e_dataset, args.output_dir, args.tile_size, args.overlap, args.workers)
-    preprocesser()
+    main(args)

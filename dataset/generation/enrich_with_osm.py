@@ -23,7 +23,7 @@ def get_osm_data(polygon):
 def enrich_images(image_paths, output_dir):
     for img_path in image_paths:
         features = get_osm_data(get_polygon_from_image_path(img_path))
-        _, class_name, instance_id, image_name = img_path.rsplit("/")
+        _, class_name, instance_id, image_name = img_path.rsplit("/", 3)
         new_img_path = os.path.join(output_dir, class_name, instance_id, image_name)
 
         metadata_path = img_path.replace("_rgb.jpg", "_rgb.json")
@@ -38,14 +38,7 @@ def enrich_images(image_paths, output_dir):
         
     return
 
-if __name__=='__main__':
-    parser = argparse.ArgumentParser(description="Process FMoW dataset.")
-    parser.add_argument('-d', "--fmow-dataset", type=str, help="FMoW dataset Directory")
-    parser.add_argument('-out', "--output-dir", type=str, help="Output Directory")
-    parser.add_argument('-w', '--workers', type=int, default=4, help="Number of parallel threads")
-
-    args = parser.parse_args()
-
+def main(args):
     image_paths = get_newest_image_paths(args.fmow_dataset)
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -54,3 +47,12 @@ if __name__=='__main__':
     
     with ThreadPoolExecutor() as executor:
         executor.map(enrich_images, splited_image_paths, [args.output_dir] * args.workers)
+
+if __name__=='__main__':
+    parser = argparse.ArgumentParser(description="Process FMoW dataset.")
+    parser.add_argument('-d', "--fmow-dataset", type=str, help="FMoW dataset Directory")
+    parser.add_argument('-out', "--output-dir", type=str, help="Output Directory")
+    parser.add_argument('-w', '--workers', type=int, default=4, help="Number of parallel threads")
+
+    args = parser.parse_args()
+    main(args)
