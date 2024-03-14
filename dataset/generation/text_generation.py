@@ -13,34 +13,52 @@ def text_gen_v1(data):
     text = "There are"
     num = 0 if "aeroway" not in data else data[data['aeroway'].notnull()].shape[0]
     text += f" {num} aeroways," if num != 0 else ""
+    if num == 1:
+        text = text[:-2] + ","
     
     num = 0 if "natural" not in data else data[data['natural'].notnull()].shape[0]
     text += f" {num} natural zones," if num != 0 else ""
+    if num == 1:
+        text = text[:-2] + ","
     
     num = 0 if "man_made" not in data else data[data['man_made'].notnull()].shape[0]
     text += f" {num} man made areas," if num != 0 else ""
+    if num == 1:
+        text = text[:-2] + ","
     
     num = 0 if "railway" not in data else data[data['railway'].notnull()].shape[0]
     text += f" {num} railways," if num != 0 else ""
+    if num == 1:
+        text = text[:-2] + ","
     
     num = 0 if "waterway" not in data else data[data['waterway'].notnull()].shape[0]
     text += f" {num} waterways," if num != 0 else ""
+    if num == 1:
+        text = text[:-2] + ","
     
     num = 0 if "highway" not in data else data[data['highway'].notnull()].shape[0]
     text += f" {num} highways," if num != 0 else ""
+    if num == 1:
+        text = text[:-2] + ","
 
     num = 0 if "building" not in data else data[data['building'].notnull()].shape[0]
     text += f" {num} buildings," if num != 0 else ""
+    if num == 1:
+        text = text[:-2] + ","
     
     num = 0 if "amenity" not in data else data[data['amenity'].notnull()].shape[0]
     text += f" {num} amenities," if num != 0 else ""
+    if num == 1:
+        text = text[:-4] + "y,"
     
     num = 0 if "landuse" not in data else data[data['landuse'].notnull()].shape[0]
     text += f" {num} landuse zones," if num != 0 else ""
+    if num == 1:
+        text = text[:-4] + "y,"
 
     if text == "There are":
         return ""
-    return text
+    return text.strip(',')
 
 def text_gen_v2(data):
     return ""
@@ -48,27 +66,29 @@ def text_gen_v2(data):
 def text_gen_v3(raw_data):
     text = ""
     data = extract_OSM_data(raw_data)
-    for key1, poly1 in data.items():
-        for key2, poly2 in data.items():
+    for i, (key1, poly1) in enumerate(data.items()):
+        for j, (key2, poly2) in enumerate(data.items()):
+            if j < i:
+                continue
             obj1 = key1.rsplit('-', 1)[0].replace('_', " ")
             obj2 = key2.rsplit('-', 1)[0].replace('_', " ")
             if obj1 == obj2:
                 continue
             if are_polygons_near(poly1, poly2):
                 if covered_by(poly1, poly2):
-                    text += f"{obj1} is covered by {obj2}. "
-                    continue
-                if covered_by(poly2, poly2):
-                    text += f"{obj1} coveres {obj2}. "
-                    continue
+                    text_part = f"{obj1} is covered by {obj2}. "
+                elif covered_by(poly2, poly1):
+                    text_part = f"{obj1} coveres {obj2}. "
+                else:
+                    centroid1 = calculate_centroid(poly1)  # Returns (longitude, latitude)
+                    centroid2 = calculate_centroid(poly2)  # Returns (longitude, latitude)
 
-                centroid1 = calculate_centroid(poly1)  # Returns (longitude, latitude)
-                centroid2 = calculate_centroid(poly2)  # Returns (longitude, latitude)
+                    bearing = calculate_bearing(centroid1, centroid2)
+                    cardinal_direction = bearing_to_cardinal(bearing)
 
-                bearing = calculate_bearing(centroid1, centroid2)
-                cardinal_direction = bearing_to_cardinal(bearing)
-
-                text += f"{obj1} is {cardinal_direction} of {obj2}. "
+                    text_part = f"{obj1} is {cardinal_direction} of {obj2}. "
+                if text_part not in text:
+                    text += text_part
     return text.strip()
 
 def text_gen_v4(data):
