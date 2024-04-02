@@ -49,14 +49,14 @@ def main(args):
         print("Generating data with version", version)
         data_frames = list(executor.map(generate_from_image_paths, splited_image_paths, [generators[version]]*args.workers))
 
-        if not len(data_frames):
-            print("Cannot generate data with version", version)
-            return
-        full_laion_data = pd.concat(data_frames, ignore_index=True)
+    if not len(data_frames):
+        print("Cannot generate data with version", version)
+        return
+    full_laion_data = pd.concat(data_frames, ignore_index=True)
 
-        if len(full_laion_data):
-            data_path = os.path.join(args.output_laion_dir, f"laion_sat_{version}_dataset.csv")
-            full_laion_data.to_csv(data_path, index=False, sep=";")
+    if len(full_laion_data):
+        data_path = os.path.join(args.output_laion_dir, f"laion_sat_{version}_dataset.csv")
+        full_laion_data.to_csv(data_path, index=False, sep=";")
 
 
 if __name__=="__main__":

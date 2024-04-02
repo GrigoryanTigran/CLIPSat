@@ -1,6 +1,7 @@
 from utils import *
 
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import threading
 from shapely.geometry import Polygon
 from shapely import wkt
 from tqdm import tqdm
@@ -22,6 +23,8 @@ class PreProcessFMoW:
     def __call__(self):
         image_paths = get_image_paths(self.fmow_dataset)
         splited_image_paths = list(split_list(image_paths, self.num_processes))
+        for aa in splited_image_paths:
+            self.preprocess_list_of_images(aa)
         with ProcessPoolExecutor() as process_executor:
             process_executor.map(self.preprocess_list_of_images, splited_image_paths)
     
@@ -48,8 +51,9 @@ class PreProcessFMoW:
         os.makedirs(tile_image_dir, exist_ok=True)
 
         def process_tiles(tiles):
+            # Your processing logic here
             for i, tile_box in enumerate(tiles):
-                img_tile = image[tile_box[0]:tile_box[2], tile_box[1]:tile_box[3]]
+                img_tile = image[tile_box[1]:tile_box[3], tile_box[0]:tile_box[2]]
                 tile_filename = f'{os.path.basename(image_path).rsplit(".", 1)[0]}_tile_{i}.jpg'
                 tile_image_path = os.path.join(tile_image_dir, tile_filename)
                 tile_metadata_path = tile_image_path.replace(".jpg", ".json")
@@ -64,20 +68,24 @@ class PreProcessFMoW:
                 tile_osm = osm_data.copy()
                 tile_osm = tile_osm[tile_osm['geometry'].apply(lambda geom: geom.intersects(image_polygon))]
                 tile_osm['geometry'] = tile_osm['geometry'].apply(lambda geom: geom.intersection(image_polygon))
-
+                
                 if len(tile_osm):
                     # Save Updates OSM Data
-                    tile_osm.to_csv(tile_osm_path, sep=";", index=False)
-                    # Save Tile Image
-                    cv2.imwrite(tile_image_path, img_tile)
+                    with lock:
+                        tile_osm.to_csv(tile_osm_path, sep=";", index=False)
+                        # Save Tile Image
+                        cv2.imwrite(tile_image_path, img_tile)
 
-                    # Save updated JSON for the tile
-                    with open(tile_metadata_path, 'w') as f_out:
-                        json.dump(tile_metadata, f_out, indent=4)
+                        # Save updated JSON for the tile
+                        with open(tile_metadata_path, 'w') as f_out:
+                            json.dump(tile_metadata, f_out, indent=4)
             return
 
-        with ThreadPoolExecutor() as thread_executor:
-            thread_executor.map(process_tiles, splited_tiles)
+
+        lock = threading.Lock()
+
+        with ThreadPoolExecutor() as process_executor:
+            process_executor.map(process_tiles, splited_tiles)
 
     
     def generate_tiles(self, width, height):
@@ -91,13 +99,13 @@ class PreProcessFMoW:
             for x in range(0, width, step_size):
                 left = x
                 upper = y
-                right = min(x + self.tile_size, width)
-                lower = min(y + self.tile_size, height)
-                if right - left < self.tile_size:
+                right = min(x + self.tile_size, width - 1)
+                lower = min(y + self.tile_size, height - 1)
+                if right == width - 1:
                     left = max(0, right - self.tile_size)
-                if lower - upper < self.tile_size:
+                if lower == height - 1:
                     upper = max(0, lower - self.tile_size)
-                tiles.append((left, upper, right, lower))
+                tiles.append((upper, left, lower, right))
         return tiles
 
     def update_metadata_for_tile(self, metadata, tile_box):
@@ -107,8 +115,9 @@ class PreProcessFMoW:
         """
         new_metadata = metadata.copy()  # Deep copy might be necessary depending on the structure
         new_metadata['bounding_boxes'] = []  # Reset bounding boxes for this tile
-        new_metadata["img_width"] = tile_box[2] - tile_box[0]
-        new_metadata["img_height"] = tile_box[3] - tile_box[1]
+
+        new_metadata["img_width"] = tile_box[3] - tile_box[1]
+        new_metadata["img_height"] = tile_box[2] - tile_box[0]
         big_polygon = wkt.loads(metadata["raw_location"])
         lng_step = (big_polygon.exterior.coords[1][0] - big_polygon.exterior.coords[0][0]) / metadata["img_width"]
         lat_step = (big_polygon.exterior.coords[2][1] - big_polygon.exterior.coords[1][1]) / metadata["img_height"]

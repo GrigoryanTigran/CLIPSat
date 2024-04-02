@@ -54,7 +54,7 @@ def text_gen_v1(data):
     num = 0 if "landuse" not in data else data[data['landuse'].notnull()].shape[0]
     text += f" {num} landuse zones," if num != 0 else ""
     if num == 1:
-        text = text[:-4] + "y,"
+        text = text[:-2] + ","
 
     if text == "There are":
         return ""
