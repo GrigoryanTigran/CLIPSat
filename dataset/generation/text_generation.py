@@ -86,7 +86,7 @@ def text_gen_v3(raw_data):
                     bearing = calculate_bearing(centroid1, centroid2)
                     cardinal_direction = bearing_to_cardinal(bearing)
 
-                    text_part = f"{obj1} is {cardinal_direction} of {obj2}. "
+                    text_part = f"{obj2} is {cardinal_direction} of {obj1}. "
                 if text_part not in text:
                     text += text_part
     return text.strip()
