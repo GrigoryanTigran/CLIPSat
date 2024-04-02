@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>LAION-Sat dataset visualizer</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css">
+    <script src="https://js.arcgis.com/4.18/"></script>
+</head>
+
+<body>
+    <h1>LAION-Sat dataset visualizer</h1>
+    <p1 style="margin-bottom: 5px">Choose LAION-Sat's csv to visualize on map</p1>
+    <div id="buttons">
+        <input type="file" id="fileInput">
+        <button onclick="submitFile()">Submit</button>
+        <img src="static/images/loading.gif" alt="Loading..." id="loader"
+            style="display: none; width: 15px; height: auto; position: relative;">
+    </div>
+    <div>
+        <div id="map" style="height: 85vh"></div>
+    </div>
+    <div id="Table" class="table-container">
+        <div id="tableContainer"></div>
+        <!-- Button to toggle table vi
+            sibility, now directly below the table -->
+    </div>
+    <img id="dataImage" class="data_image"></img>
+    <script src="{{ url_for('static', filename='js/script.js') }}">
+    </script>
+</body>
+
+</html>
