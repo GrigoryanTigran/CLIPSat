@@ -162,13 +162,21 @@ function truncateTableText() {
         }
     });
 }
+last_color = "";
+last_row = "";
 function rowClickable() {
     document.querySelectorAll('.data tbody tr').forEach((row, index) => {
         // Assuming the first cell in every row should be clickable
         const firstCell = row.cells[0];
         firstCell.addEventListener('click', () => {
             const rowId = index; // Using row index as ID, adjust based on your needs
-
+            var rows = document.querySelectorAll("table tr");
+            if (last_row !== "") {
+                rows[last_row + 1].style.backgroundColor = last_color;
+            }
+            last_color = rows[rowId + 1].style.backgroundColor;
+            last_row = rowId;
+            rows[rowId + 1].style.backgroundColor = "#1B263B";
             fetch('/process-row', {
                 method: 'POST',
                 headers: {
@@ -178,15 +186,13 @@ function rowClickable() {
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Backend response:", data);
                     drawWktPolygonAndView(data['image_polygon']);
                     //toggleTableVisibility();
                     const imageUrl = data.image_path;
-                    console.log("ASD", imageUrl);
                     // Make the table invisibl
                     const imageContainer = document.getElementById('dataImage');
-                    console.log(imageContainer);
                     imageContainer.src = imageUrl;
+                    imageContainer.style.border = "5px solid #1B263B";
                 })
                 .catch(error => console.error('Error:', error));
         });
@@ -215,6 +221,7 @@ function addToggleButton() {
     document.getElementById('tableContainer').querySelector('table').style.display = 'block';
     return;
 }
+lastScrollTop = 0; // To hold the scroll position
 
 function toggleTableVisibility() {
     const tableContainer = document.getElementById('tableContainer');
@@ -222,11 +229,12 @@ function toggleTableVisibility() {
     var img = document.getElementById('toggleButton')// Reference the img within the button
     if (table.style.display === 'none' || !table.style.display) {
         table.style.display = 'block'; // Show table
-        console.log("BBBBB", img);
+        tableContainer.scrollTop = lastScrollTop;
         img.src = 'static/images/up-arrow.svg'; // Change to up-arrow
     } else {
+        lastScrollTop = tableContainer.scrollTop;
+        console.log(lastScrollTop, "AFFFF");
         table.style.display = 'none'; // Hide table
-        console.log("AAAAA", img);
         img.src = 'static/images/down-arrow.svg'; // Change back to down-arrow
     }
 }
