@@ -59,4 +59,29 @@ Arguments:
 
 
 
-# Visualisation
+# LAION-Sat Dataset Visualizer
+
+The LAION-Sat Dataset Visualizer is a web application designed to enable users to easily visualize and interact with the LAION dataset in CSV format. Utilizing a map interface, users can upload LAION CSV data and visually explore each row based on text, with additional functionality for viewing truncated text in full.
+
+## Features
+
+- **Upload LAION Dataset**: Users can upload a LAION dataset in CSV format for visualization.
+- **Interactive Map Interface**: Powered by ArcGIS, the map allows for visual exploration of the dataset.
+- **Clickable Table Rows**: Display data points on the map by clicking on corresponding fields in the table.
+- **Expandable Text**: Clickable text in the table cells allows users to view the full text for truncated data.
+- **Toggle Table Visibility**: Manage screen space by toggling the visibility of the dataset table.
+
+## Running the Application
+
+Execute the following command to start the web server:
+```bash
+python3 app.py
+```
+Then, open a web browser and go to `127.0.0.1:5000` to access the visualizer.
+
+## Usage
+
+- **Uploading Data**: Click the "Choose File" button to upload your LAION CSV dataset, then click "Submit".
+- **Viewing Data on Map**: Click on a row in the table to visualize the corresponding data point on the map.
+- **Expanding Truncated Text**: Click on the `...` in any table cell to view the full text.
+- **Toggle Table Visibility**: Use the toggle button below the table to hide/show the table for better map visibility.
