@@ -35,7 +35,9 @@ def extract_OSM_data(features):
     return full_data
 
 def give_id(data, col):
-    data['ID'] = (data.groupby(col).cumcount() + 1)
+    ID = data.groupby(col).cumcount() + 1
+    ID = ID.rename("ID")
+    data = pd.concat([ID, data], axis=1)
     data["ID"] = data["ID"].fillna(0)
     data["ID"] = data["ID"].astype(int).astype(str)
 
@@ -63,38 +65,51 @@ def get_data(features, col, process_data):
     if not len(data):
         return {}, features
     data = data.replace("_", " ")
+    #print(data.dtypes)
+    for c in data.columns:
+        data[c] = data[c].apply(lambda x: c if x == 'yes' else x)
     data = process_data(data)
+    #print(data.dtypes, "aaaaaaaaaaaaaaaaaaaaa", col)
+    data = data.fillna("")
     data = give_id(data, col)
+    #print(data['geometry'])
     data['geometry'] = data['geometry'].apply(wkt.loads)
     data = data.set_index(col)["geometry"].to_dict()
     features = features[features[col].isnull()]
     return data, features
 
 def process_aeroway(data):
-    #data = data.fullna("")
+    #data = data.fillna("")
     data = add_type(data, "aeroway")
+    data = add_type(data, "aeroway")
+    data = data_string(data, ['man_made'])
     data['aeroway'] = data['aeroway'] + " in aeroway"
     return data
 
 def process_natural(data):
     data = add_type(data, "natural")
+    data = add_type(data, "natural")
+    data = data_string(data, ['man_made'])
     data['natural'] = "natural " + data['natural']
     return data
 
 def process_man_made(data):
     data = add_type(data, "man_made")
+    data = data_string(data, ['man_made'])
     data['man_made'] = "man made " + data['man_made']
     return data
 
 def process_railway(data):
     data = add_type(data, "railway")
     data = data.fillna("")
+    data = data_string(data, ['railway', 'usage', 'service'])
     data['railway'] = data.get("usage", "") + " " + data.get("service", "") + " " + data['railway'] + ' railway'
     data['railway'] = data['railway'].str.replace(r'\s+', ' ', regex=True).str.strip()
     return data
 
 def process_waterway(data):
     data = add_type(data, "waterway")
+    data = data_string(data, ["tunnel", "waterway"])
     if "tunnel" in data.columns:
         data['tunnel'] = " with " + data['tunnel'] + " tunnel"
     data = data.fillna("")
@@ -103,6 +118,7 @@ def process_waterway(data):
 
 def process_highway(data):
     data = add_type(data, "highway")
+    data = data_string(data, ["oneway", "bridge", "junction", "surface", "highway"])
     for col in ["oneway", "bridge", "junction", "surface"]:
         if col not in data.columns:
             data.loc[:, col] = pd.Series([""] * len(data), name=col)
@@ -118,6 +134,7 @@ def process_highway(data):
     return data
 
 def process_building(data):
+    data = data_string(data, ['building', 'office', 'tourism', 'amenity', "roof:material", 'roof:shape', 'building'])
     data.loc[data["building"] == "yes", "building"] = ""
     data = add_type(data, "building")
     data = data.fillna("")
@@ -128,13 +145,22 @@ def process_building(data):
 
 def process_amenity(data):
     data = data.fillna('')
+    data = data_string(data, ['amenity', 'landuse'])
     data['amenity'] = data.get('landuse', "") + " " + data.get('amenity', "") + " amenity"
     data['amenity'] = data.get('amenity', "").str.replace(r'\s+', ' ', regex=True).str.strip()
     return data
 
 def process_landuse(data):
     data = data.fillna('')
+    data = data_string(data, ['barrier', "sport", 'leisure', 'landuse'])
     data['landuse'] = data.get('barrier', "") + " " + data.get("sport", "") + " " + data.get('leisure', "") + " " + data.get('landuse', "") + " landuse"
     data['landuse'] = data.get('landuse', "").str.replace(r'\s+', ' ', regex=True).str.strip()
+
+    return data
+
+def data_string(data, columns):
+    for c in columns:
+        if c in data:
+            data[c] = data[c].astype(str)
 
     return data

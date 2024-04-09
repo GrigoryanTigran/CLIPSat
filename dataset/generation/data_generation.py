@@ -10,10 +10,10 @@ import argparse
 import random
 import os
 
-def generate_from_image_paths(image_paths, text_generator):
+def generate_from_image_paths(image_paths, text_generator, id):
     laion_data = pd.DataFrame(columns = ["FilePath", "Text", "License Information", "Image Hash", "GSD", "Metadata Path", "OSM Data Path", "UTM", "Country Code", "Timestamp"])
 
-    for image_path in image_paths:
+    for image_path in tqdm(image_paths, desc=f"Processing N-{id} list of images"):
         json_path = image_path[:-3] + "json"
         osm_path = image_path[:-3] + "csv"
         if not (os.path.exists(json_path) and os.path.exists(osm_path)):
@@ -40,6 +40,7 @@ def main(args):
 
     os.makedirs(args.output_laion_dir, exist_ok=True)
     image_paths = get_image_paths(args.fmow_dataset)
+    print("Number of images", len(image_paths))
     random.shuffle(image_paths)
     splited_image_paths = split_list(image_paths, args.workers)
     
@@ -47,7 +48,7 @@ def main(args):
     version = args.text_generator_version
     with ProcessPoolExecutor() as executor:
         print("Generating data with version", version)
-        data_frames = list(executor.map(generate_from_image_paths, splited_image_paths, [generators[version]]*args.workers))
+        data_frames = list(executor.map(generate_from_image_paths, splited_image_paths, [generators[version]]*args.workers, range(args.workers)))
 
     if not len(data_frames):
         print("Cannot generate data with version", version)
