@@ -60,8 +60,16 @@ def text_gen_v1(data):
         return ""
     return text.strip(',')
 
-def text_gen_v2(data):
-    return ""
+def text_gen_v2(raw_data):
+    text = ""
+    data = extract_OSM_data(raw_data)
+    for i, (key1, poly1) in enumerate(data.items()):
+        obj1 = key1.rsplit('-', 1)[0].replace('_', " ")
+        if obj1 in text:
+            continue
+        text += f"{obj1}, "
+    text = text.strip(", ")
+    return text
     
 def text_gen_v3(raw_data):
     text = ""
