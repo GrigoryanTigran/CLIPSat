@@ -8,6 +8,7 @@ from tqdm import tqdm
 import pandas as pd
 import math
 import json
+import sys
 import os
 
 class PreProcessFMoW:
@@ -23,17 +24,19 @@ class PreProcessFMoW:
     def __call__(self):
         image_paths = get_image_paths(self.fmow_dataset)
         splited_image_paths = list(split_list(image_paths, self.num_processes))
-        for aa in splited_image_paths:
-            self.preprocess_list_of_images(aa)
+        #for aa in splited_image_paths:
+        #    self.preprocess_list_of_images(aa)
         with ProcessPoolExecutor() as process_executor:
-            process_executor.map(self.preprocess_list_of_images, splited_image_paths)
+            process_executor.map(self.preprocess_list_of_images, splited_image_paths, range(self.num_processes))
     
-    def preprocess_list_of_images(self, image_paths):
-        for img_path in image_paths:
+    def preprocess_list_of_images(self, image_paths, id):
+        for img_path in tqdm(image_paths, desc=f"Processing N-{id} list of images"):
             image_data = get_image_data(img_path)
             self.preprocess_image(image_data)
          
     def preprocess_image(self, image_data):
+        sys.stdout.flush()
+
         image = image_data["image"]
         metadata = image_data["metadata"]
         image_path = image_data["image_path"]
@@ -41,44 +44,54 @@ class PreProcessFMoW:
         osm_data_path = full_image_path.replace(".jpg", ".csv")
         try:
             osm_data = pd.read_csv(osm_data_path, sep=";", low_memory=False)
-        except:
+            if osm_data.empty:
+                return
+
+            osm_data["geometry"] = osm_data["geometry"].astype(str).apply(wkt.loads)
+            width, height, _ = image.shape
+            tiles = self.generate_tiles(width, height)
+            splited_tiles = split_list(tiles, self.num_threads_in_process)
+            tile_image_dir = os.path.join(self.output_dir, os.path.dirname(image_path))
+            os.makedirs(tile_image_dir, exist_ok=True)
+        except Exception as e:
+            # Handle other potential exceptions, such as parsing errors
+            #print(f"Error reading {osm_data_path}: {e}")
             return
-        osm_data["geometry"] = osm_data["geometry"].astype(str).apply(wkt.loads)
-        width, height, _ = image.shape
-        tiles = self.generate_tiles(width, height)
-        splited_tiles = split_list(tiles, self.num_threads_in_process)
-        tile_image_dir = os.path.join(self.output_dir, os.path.dirname(image_path))
-        os.makedirs(tile_image_dir, exist_ok=True)
 
         def process_tiles(tiles):
             # Your processing logic here
             for i, tile_box in enumerate(tiles):
-                img_tile = image[tile_box[1]:tile_box[3], tile_box[0]:tile_box[2]]
-                tile_filename = f'{os.path.basename(image_path).rsplit(".", 1)[0]}_tile_{i}.jpg'
-                tile_image_path = os.path.join(tile_image_dir, tile_filename)
-                tile_metadata_path = tile_image_path.replace(".jpg", ".json")
-                tile_osm_path = tile_image_path.replace(".jpg", ".csv")
+                try:
+                    img_tile = image[tile_box[1]:tile_box[3], tile_box[0]:tile_box[2]]
+                    tile_filename = f'{os.path.basename(image_path).rsplit(".", 1)[0]}_tile_{i}.jpg'
+                    tile_image_path = os.path.join(tile_image_dir, tile_filename)
+                    tile_metadata_path = tile_image_path.replace(".jpg", ".json")
+                    tile_osm_path = tile_image_path.replace(".jpg", ".csv")
 
-                # Update JSON
-                tile_metadata = self.update_metadata_for_tile(metadata, tile_box)
-                tile_metadata["original_image_path"] = full_image_path 
+                    # Update JSON
+                    tile_metadata = self.update_metadata_for_tile(metadata, tile_box)
+                    tile_metadata["original_image_path"] = full_image_path 
 
-                # Update OSM Data
-                image_polygon = wkt.loads(tile_metadata["raw_location"])
-                tile_osm = osm_data.copy()
-                tile_osm = tile_osm[tile_osm['geometry'].apply(lambda geom: geom.intersects(image_polygon))]
-                tile_osm['geometry'] = tile_osm['geometry'].apply(lambda geom: geom.intersection(image_polygon))
-                
-                if len(tile_osm):
-                    # Save Updates OSM Data
-                    with lock:
-                        tile_osm.to_csv(tile_osm_path, sep=";", index=False)
-                        # Save Tile Image
-                        cv2.imwrite(tile_image_path, img_tile)
+                    # Update OSM Data
+                    image_polygon = wkt.loads(tile_metadata["raw_location"])
+                    tile_osm = osm_data.copy()
+                    tile_osm = tile_osm[tile_osm['geometry'].apply(lambda geom: geom.intersects(image_polygon))]
+                    tile_osm['geometry'] = tile_osm['geometry'].apply(lambda geom: geom.intersection(image_polygon))
+                    
+                    if len(tile_osm):
+                        # Save Updates OSM Data
+                        with lock:
+                            tile_osm.to_csv(tile_osm_path, sep=";", index=False)
+                            # Save Tile Image
+                            cv2.imwrite(tile_image_path, img_tile)
 
-                        # Save updated JSON for the tile
-                        with open(tile_metadata_path, 'w') as f_out:
-                            json.dump(tile_metadata, f_out, indent=4)
+                            # Save updated JSON for the tile
+                            with open(tile_metadata_path, 'w') as f_out:
+                                json.dump(tile_metadata, f_out, indent=4)
+                except Exception as e:
+                    # Handle other potential exceptions, such as parsing errors
+                    #print(f"Error reading {osm_data_path}: {e}")
+                    continue
             return
 
 
