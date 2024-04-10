@@ -1,4 +1,5 @@
 from shapely import wkt
+import random
 import json
 import cv2
 import os
@@ -67,7 +68,7 @@ def get_image_paths(fmow_datapath):
 
             images = [os.path.join(instance_path, f) for f in os.listdir(instance_path) if f.endswith(('.jpg', ".png"))]
             image_paths.extend(images)
-
+    random.shuffle(image_paths)
     return image_paths
 
 def get_newest_image_paths(fmow_datapath):

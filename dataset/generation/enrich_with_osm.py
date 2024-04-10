@@ -75,9 +75,9 @@ def enrich_images(image_paths, output_dir):
         
         os.makedirs(os.path.dirname(osm_data_path), exist_ok=True)
         features.to_csv(osm_data_path, index=False, sep=';')
-        if not os.path.exists(os.path.join(os.getcwd(), img_path)):
+        if not os.path.exists(new_img_path):
             os.symlink(os.path.join(os.getcwd(), img_path), new_img_path)
-        if not os.path.exists(os.path.join(os.getcwd(), metadata_path)):
+        if not os.path.exists(new_metadata_path):
             os.symlink(os.path.join(os.getcwd(), metadata_path), new_metadata_path)
         sys.stdout.flush()
 

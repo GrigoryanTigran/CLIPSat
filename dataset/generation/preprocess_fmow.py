@@ -23,7 +23,9 @@ class PreProcessFMoW:
 
     def __call__(self):
         image_paths = get_image_paths(self.fmow_dataset)
+        print("Full number of images", len(image_paths))
         splited_image_paths = list(split_list(image_paths, self.num_processes))
+        print("Full number of slited list of images", len(splited_image_paths), "and with size each", len(splited_image_paths[0]))
         #for aa in splited_image_paths:
         #    self.preprocess_list_of_images(aa)
         with ProcessPoolExecutor() as process_executor:
@@ -66,6 +68,9 @@ class PreProcessFMoW:
                     tile_filename = f'{os.path.basename(image_path).rsplit(".", 1)[0]}_tile_{i}.jpg'
                     tile_image_path = os.path.join(tile_image_dir, tile_filename)
                     tile_metadata_path = tile_image_path.replace(".jpg", ".json")
+                    if os.path.exists(tile_metadata_path):
+                        continue
+
                     tile_osm_path = tile_image_path.replace(".jpg", ".csv")
 
                     # Update JSON
@@ -78,6 +83,7 @@ class PreProcessFMoW:
                     tile_osm = tile_osm[tile_osm['geometry'].apply(lambda geom: geom.intersects(image_polygon))]
                     tile_osm['geometry'] = tile_osm['geometry'].apply(lambda geom: geom.intersection(image_polygon))
                     
+
                     if len(tile_osm):
                         # Save Updates OSM Data
                         with lock:

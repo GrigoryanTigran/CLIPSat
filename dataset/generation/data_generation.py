@@ -14,19 +14,22 @@ def generate_from_image_paths(image_paths, text_generator, id):
     laion_data = pd.DataFrame(columns = ["FilePath", "Text", "License Information", "Image Hash", "GSD", "Metadata Path", "OSM Data Path", "UTM", "Country Code", "Timestamp"])
 
     for image_path in tqdm(image_paths, desc=f"Processing N-{id} list of images"):
-        json_path = image_path[:-3] + "json"
-        osm_path = image_path[:-3] + "csv"
-        if not (os.path.exists(json_path) and os.path.exists(osm_path)):
-            continue
-        # Generate text for the image
-        metadata = get_image_data(image_path)["metadata"]
-        osm_raw_data = pd.read_csv(osm_path, sep=';')
+        try:
+            json_path = image_path[:-3] + "json"
+            osm_path = image_path[:-3] + "csv"
+            if not (os.path.exists(json_path) and os.path.exists(osm_path)):
+                continue
+            # Generate text for the image
+            metadata = get_image_data(image_path)["metadata"]
+            osm_raw_data = pd.read_csv(osm_path, sep=';')
 
-        generated_text = text_generator(osm_raw_data)
-        if generated_text == "":
-            continue
-        laion_data.loc[len(laion_data.index)] = [image_path, generated_text, "Unknown", "N/A", metadata["gsd"], 
-                                                 json_path, osm_path, metadata["utm"], metadata["country_code"], metadata["timestamp"]]
+            generated_text = text_generator(osm_raw_data)
+            if generated_text == "":
+                continue
+            laion_data.loc[len(laion_data.index)] = [image_path, generated_text, "Unknown", "N/A", metadata["gsd"], 
+                                                     json_path, osm_path, metadata["utm"], metadata["country_code"], metadata["timestamp"]]
+        except Exception as e:
+            print("ERROR occured for", image_path, '\t', e)
     
 
     return laion_data
